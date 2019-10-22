@@ -1,0 +1,47 @@
+---
+title: "Developing Data Projects Week 2 Project"
+author: "Srotaswati Panda"
+date: "09/10/2019"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(ggmap))
+register_google(key = "AIzaSyC8maiBmiaTRBL-25DWjOlvdp2Aug7KMTM")
+```
+
+## Function
+This code enters the name of a city and displays its map using the Google API.
+
+```{r inputs}
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(ggmap))
+ui<-fluidPage(
+  htmlOutput("text1"),
+  textInput("text","Write the name of the city here!"),
+  actionButton("display","Submit"),
+  htmlOutput("text2"),
+  leafletOutput("mymap")
+)
+server<-function(input,output,session){
+  output$text1<-renderText({
+    paste("Hi, today's date is",format(Sys.Date(),"%d %b %Y"))
+  })
+  output$text2<-eventReactive(input$display,{
+      paste0("Showing ","<font colour=\"#0000FF\"><b>",toupper(input$text),"</b></font>","'s map!")
+  })
+  output$mymap<-renderLeaflet({
+    input$display
+    isolate({
+      df<-data.frame(geocode(input$text))
+      df%>%leaflet()%>%addTiles%>%addMarkers()
+    })
+  })
+}
+shinyApp(ui,server)
+```
+
+

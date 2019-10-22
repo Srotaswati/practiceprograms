@@ -1,0 +1,83 @@
+---
+title: "Regression Models Coursera Project"
+author: "Srotaswati Panda"
+date: "04/10/2019"
+output: pdf_document
+---
+
+```{r setup, message=FALSE,echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, hold=TRUE)
+library(ggplot2)
+library(corrplot)
+library(car)
+```
+
+## Overview: 
+
+Motor Trend is interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome) from a data set of a collection of cars. They are particularly interested in the following two questions:  
+1. Is an automatic or manual transmission better for MPG?  
+2. Quantify the MPG difference between automatic and manual transmissions
+
+## Analysis
+### 1. Exploratory Data Analyses
+
+The data is initially loaded and the column types and data is noted
+```{r data}
+data(mtcars)
+head(mtcars)
+```
+
+Next we plot some exploratory graphs and compute central measures and conduct t-tests to investigate if there is a relationship between transmission type and MPG
+
+From the box-plots and the central measures (refer Appendix 1) of MPG data subsetted by transmission type, manual transmissions result in significantly higher mileage. To provide further evidence for this preliminary observation we next test the hypothesis ${H_o}$: There is no difference in means between automatic or manual transmission. 
+
+```{r t-test}
+t.test(mtcars[mtcars$am=="0",]$mpg,mtcars[mtcars$am=="1",]$mpg)
+```
+Based on the p-value at the significance level of ${\alpha}$ = 0.5 and that the confidence interval does not include 0, we can reject the null hypothesis and claim that the transmission type impacts the MPG. To quantify the MPG difference between manual and automatic transmissions, we need regression analysis.
+
+### 2. Regression Analysis for finding the best model
+
+After finding the best model (refer Appendix 2), the model is shown here and the summary noted.
+```{r final}
+mvr2_removed<-lm(mpg~am+qsec+carb,mtcars[-c(17),])
+summary(mvr2_removed)
+```
+
+
+## Conclusion
+The best transmission type for MPG has been determined to be the manual transmission type. It was confirmed by the model in which while the manual transmission type has a coefficient of 8.45, that for the automatic transmission type is less than 1. 
+
+## Appendix
+1. ggplot
+```{r graphs}
+g<-ggplot(aes(x=factor(am),y=mpg),data=mtcars)+geom_boxplot(aes(fill=factor(am)))
+g<-g+ggtitle("Transmission Impact on Mileage")+xlab("Transmission Mode")+ylab("Miles per US gallon")
+g<-g+theme(legend.position = "none")+scale_x_discrete(labels=c("Automatic","Manual"))
+g
+mtx<-rbind(tapply(mtcars$mpg,mtcars$am,mean),tapply(mtcars$mpg,mtcars$am,sd))
+dimnames(mtx)<-list(c("Mean","Sd"),c("Automatic","Manual"))
+mtx
+```
+
+2. Finding the best model
+
+```{r regress}
+lr<-lm(mpg~am,mtcars);summary(lr)$adj.r.squared
+mvr<-lm(mpg~.,mtcars);summary(mvr)$adj.r.squared
+corMatrix<-as.matrix(cor(mtcars))
+corrplot(corMatrix,method = "number")
+mvr2<-lm(mpg~am+qsec+carb,mtcars);summary(mvr)$adj.r.squared
+anova(mvr2,mvr)
+vif(mvr2)
+```
+While the linear regression agains transmission type has a $R^2$ of only 34%, the multivariate regression explains 81% of the variation in MPG. A multicollinearity plot shows that the variables disp,hp,cyl,drat,carb,wt and vs are highly dependent on other variables. After testing a few combinations, the model mvr2 had the best variance inflation factors. However the p-value of the anova test at a significance level of 0.1 however at 0.05 supports the inclusion of higher degrees of freedom. Next we test the residuals in the regression
+
+```{r residuals}
+par(mfrow=c(1,3))
+plot(mvr2,which = 1);plot(mvr2,which=4);plot(mvr2,which=2)
+which(rownames(mtcars)=="Chrysler Imperial")
+mvr2_removed<-lm(mpg~am+qsec+carb,mtcars[-c(17),])
+```
+There are 3 points as outliers. A Cook's distance plot shows the high leverage of one of the outliers which can be removed from the regression. Further from the Normal Q-Q plot, the points pass normality.

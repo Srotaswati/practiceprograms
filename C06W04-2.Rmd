@@ -1,0 +1,74 @@
+---
+title: "Statistical Inference Project - Part 2"
+author: "Srotaswati Panda"
+date: "01/10/2019"
+output: pdf_document
+geometry: margin=1.5cm
+---
+
+### This is a project for the Coursera Data Science class on Statistical Inference
+
+# Part 1: Basic Inferential Data Analysis
+### Overview: 
+Analyze the ToothGrowth data in the R datasets package.  
+1. Load the ToothGrowth data and perform some basic exploratory data analyses.  
+2. Provide a basic summary of the data.  
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)  
+4. State your conclusions and the assumptions needed for your conclusions.
+
+### Setup Environment and Load Data
+Load libraries and set global options
+```{r setup}
+library(knitr)
+opts_chunk$set(echo = TRUE,message=FALSE,warning=FALSE,tidy=TRUE)
+library(ggplot2)
+library(datasets)
+library(xtable)
+```
+
+### 1. Load ToothGrowth dataset and provide basic summary of the data
+Display the first few rows of the data and show the unique values of Dose and Supplement Delivery Method
+```{r dataset, results='asis'}
+data(ToothGrowth)
+print(kable(head(ToothGrowth)))
+print(kable(table(ToothGrowth$supp,ToothGrowth$dose)))
+```
+```{r summary}
+sum(!complete.cases(ToothGrowth))
+summary(ToothGrowth$len)
+```
+
+### 2. Perform basic exploratory analyses
+Boxplots would show the range of Tooth Lengths vis a vis Dose Amount and Supplement Delivery Method. Tooth Lengths seem to be positively correlated with both Dose and Delivery Method. Further evidence can be established by running t-tests.
+```{r boxplot}
+ToothGrowth$dose<-as.factor(ToothGrowth$dose)
+g<-ggplot(data=ToothGrowth,aes(x=dose,y=len))
+g<-g+geom_boxplot(aes(fill=dose))
+g<-g+labs(x="Dose Amount",y="Tooth Length")
+g<-g+facet_grid(.~supp)
+g
+g<-ggplot(data=ToothGrowth,aes(x=supp,y=len))
+g<-g+geom_boxplot(aes(fill=supp))
+g<-g+labs(x="Supplement Delivery",y="Tooth Length")
+g<-g+facet_grid(.~dose)
+g
+```
+
+### 3. Hypothesis testing
+```{r ttests1}
+t.test(len~supp,data = ToothGrowth)
+```
+At the significance level ${\alpha}$ = 0.5, the p-Value is higher at 0.06, we fail to reject the null hypothesis ${H_o}$: difference in means for the groups 'OJ' and 'VC' is equal to 0. Also, the confidence interval includes 0, so the test is not significant.
+
+```{r ttests2}
+sub<-subset(ToothGrowth,ToothGrowth$dose %in% c(0.5,1.0))
+t.test(len~dose,data = sub)
+sub<-subset(ToothGrowth,ToothGrowth$dose %in% c(1.0,2.0))
+t.test(len~dose,data = sub)
+sub<-subset(ToothGrowth,ToothGrowth$dose %in% c(2.0,0.5))
+t.test(len~dose,data = sub)
+```
+At the significance level ${\alpha}$ = 0.5, the p-Values of all the above tests is very close to 0 which implies that the null hypothesis ${H_o}$ will be rejected in favor of the alternative hypothesis ${H_a}$ that the difference in means for the three groups of Dosage Amounts in not equal to 0. Also, the confidence intervals do not contain 0.
+
+### 4. Conclusions
+It is not very clear if the Tooth Lengths are independent of Delivery Methods. However from the t-tests and the confidence intervals, Tooth Lengths increase with the increase in Dosage Amounts, which is also evident from the boxplots.

@@ -1,0 +1,93 @@
+---
+title: "Practical Machine Learning Project"
+author: "Srotaswati Panda"
+date: "07/10/2019"
+output: html_document
+---
+
+## Overview
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website [here](http://groupware.les.inf.puc-rio.br/har).
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,results = "hold")
+library(caret)
+library(rattle)
+library(randomForest)
+```
+
+## Analysis Methodology
+
+### Data Loading and Processing
+This cached step downloads the data and stores it in a local folder.
+```{r get_data,cache=TRUE}
+if (!file.exists("./data/har-training")){
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",destfile = "./data/har-training.csv",method="curl")
+}
+if (!file.exists("./data/har-validation")){
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",destfile = "./data/har-validation.csv",method="curl")
+}
+train<-read.csv("./data/har-training.csv",header = TRUE)
+valid<-read.csv("./data/har-validation.csv",header = TRUE)
+dim(train);dim(valid)
+```
+
+The number of complete cases is almost equal to the dimensions of the training and test sets. str() shows many variables with missing values. Those variables will be removed. 
+```{r clean_data}
+c(sum(!complete.cases(train)),sum(!complete.cases(valid)))
+train_cleaned<-train[,colSums(is.na(train))==0]
+valid_cleaned<-valid[,colSums(is.na(valid))==0]
+dim(train_cleaned);dim(valid_cleaned)
+```
+
+### Preparing the training and testing datasets
+The training set is split into 70:30 for training and testing. 
+```{r prepare_data}
+set.seed(33447)
+inTrain<-createDataPartition(train_cleaned$classe,p=0.7,list = FALSE)
+training<-train_cleaned[inTrain,]
+testing<-train_cleaned[-inTrain,]
+dim(training);dim(testing)
+```
+
+Also str() shows that the first seven variables in both datasets describes timestamps, usernames and window which would not be used for the training and prediction and can be removed. Other variables with near zero variance will also be removed. It may be noted that an identical() on the features of training and validation datasets is FALSE.
+```{r remove_var}
+nzv<-nearZeroVar(training)
+training<-training[,-c(1:7,nzv)]
+testing<-testing[,-c(1:7,nzv)]
+validation<-valid_cleaned[,-c(1:7)]
+dim(training);dim(testing);dim(validation)
+```
+
+### Building the Model
+**Classification Trees**
+We first use the Cross Validation approach in the training control to avoid overfitting. However, it did not result in any improvement in accuracy because of which the trControl parameter was not included in the fitting. The model performs poorly with a Accuracy of only 0.49 on the testing data. 
+```{r trees,cache=TRUE}
+set.seed(46327)
+trControl<-trainControl(method = "cv",number=5)
+model_ct<-train(classe~.,data=training, method="rpart")
+fancyRpartPlot(model_ct$finalModel)
+```
+```{r predict_trees}
+predict_ct<-predict(model_ct,newdata = testing)
+confMat_ct<-confusionMatrix(testing$classe,predict_ct)
+plot(confMat_ct$table,confMat_ct$byClass, main=paste("Misclassification error rate:",round(1-confMat_ct$overall[1],4)))
+```
+**Random Forests**
+Next we use Random Forests in the training and use the default S3 method to improve the performance time. This model showed a huge improvement over trees.
+```{r forests,cache=TRUE}
+set.seed(46327)
+model_rf<-randomForest(y=training[,53],x=training[,1:52])
+```
+```{r predict_forests}
+predict_rf<-predict(model_rf,newdata=testing)
+confMat_rf<-confusionMatrix(testing$classe,predict_rf)
+plot(confMat_rf$table,confMat_rf$byClass,main=paste("Misclassification error rate:",round(1-confMat_rf$overall[1],4)))
+```
+### Testing on validation data
+```{r valid}
+predict(model_rf,newdata = validation)
+```
+## Conclusion
+From all the tests described, Random Forests had the best accuracy on the testing data set.
+

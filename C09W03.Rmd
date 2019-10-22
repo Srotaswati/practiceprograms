@@ -1,0 +1,65 @@
+---
+title: "Week 3 Assignment"
+author: "Srotaswati Panda"
+date: "09/10/2019"
+output: ioslides_presentation
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, results = "hold")
+```
+
+## Overview
+
+This presentation was created using a R Markdown file. The code in the following file plots 2014 World GDP data with tooltips and color gradients for GDP.
+
+## Slide with R Output {.smaller}
+
+```{r code, echo = TRUE, eval=FALSE}
+suppressPackageStartupMessages(library(plotly))
+df<-read.csv(
+  "https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv")
+names(df)<-c("country","gdp","code")
+df$hover<-with(
+  df,paste(country,'<br>',"GDP: ",gdp)
+  )
+l<-list(
+  color=toRGB("grey"),
+  width=0.5
+)
+g<-list(
+  projection = list(type='Mercator'),
+  showframe = FALSE
+)
+p<-df%>%plot_geo()%>%add_trace(
+  z=~gdp,color=~gdp,colors='Blues',text=~hover,hoverinfo="text",locations=~code,marker=list(
+    line=l),showscale=FALSE
+  )%>%layout(title="2014 Global GDP",geo=g)
+p
+```
+
+## Slide with Plot
+
+```{r plot, echo = FALSE, eval=TRUE}
+suppressPackageStartupMessages(library(plotly))
+df<-read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv")
+names(df)<-c("country","gdp","code")
+df$hover<-with(
+  df,paste(country,'<br>',"GDP in $B: ",gdp)
+  )
+l<-list(
+  color=toRGB("lightgrey"),
+  width=0.5
+)
+g<-list(
+  projection = list(type='Mercator'),
+  showframe = FALSE
+)
+p<-df%>%plot_geo()%>%add_trace(
+  z=~gdp,color=~gdp,colors='Blues',text=~hover,hoverinfo="text",locations=~code,marker=list(line=l),showscale=FALSE
+  )%>%layout(title="2014 Global GDP",geo=g)
+p
+```
+
+## The End
