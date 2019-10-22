@@ -1,0 +1,116 @@
+---
+title: 'Exploratory Data Analysis: Project 2'
+author: "Srotaswati Panda"
+output: html_document
+---
+
+## Overview: 
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+### Loading libraries and global options
+```{r setup, results='hide', message=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, results='hold',message=FALSE)
+library(lubridate)
+library(dplyr)
+library(xtable)
+```
+
+### Reading in the dataset 
+The data for this assignment come in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size. The data was stored in the common folder and read into a dataframe *data*. Tnis code chunk was cached as it takes a long time to read the data and had to be frequently reset.
+```{r read, cache=TRUE}
+if (!file.exists("./data/storms.csv.bz2")){
+  fileurl<-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+  download.file(fileurl,"./data/storms.csv.bz2",method="curl")
+}
+data<-read.csv(bzfile("./data/storms.csv.bz2"),header = TRUE,stringsAsFactors = FALSE)
+```
+
+### Data Processing
+The required columns with events, dates, and damages were selected. The range of the date confirms that the database is dated within 1950 and 2011. 
+```{r process}
+names(data)
+data<-data%>%select(c(2,6,7,8,23,24,25,26,27,28))%>%mutate(EVTYPE=toupper(EVTYPE))%>%mutate(BGN_DATE=as.Date(BGN_DATE,format = "%m/%d/%Y"))%>%filter(!grepl("SUMMARY",EVTYPE))
+str(data)
+range(year(data$BGN_DATE))
+```
+  
+However, the list of all events showed duplications and mispellings. Following code is for the correction for string names in Event Type column
+```{r events}
+data$EVTYPE[grep("AVALAN",data$EVTYPE)]<-"AVALANCHE"
+data$EVTYPE[grep("BLIZZARD|WINTER|COLD",data$EVTYPE)]<-"BLIZZARD"
+data$EVTYPE[grep("DUST",data$EVTYPE)]<-"DUST STORM"
+data$EVTYPE[grep("FIRE",data$EVTYPE)]<-"WILDFIRE"
+data$EVTYPE[grep("FLOOD|FLDG|FLD|URBAN|FLOOO",data$EVTYPE)] <-"FLOOD"
+data$EVTYPE[grep("FREEZE|FREEZING",data$EVTYPE)]<-"FREEZE"
+data$EVTYPE[grep("ICE|ICY",data$EVTYPE)]<-"ICE"
+data$EVTYPE[grep("HAIL",data$EVTYPE)]<-"HAIL"
+data$EVTYPE[grep("HEAT|HOT|HIGH TEMP",data$EVTYPE)]<-"HEATWAVE"
+data$EVTYPE[grep("HEAVY",data$EVTYPE)]<-"HEAVY RAINS"
+data$EVTYPE[grep("HIGH",data$EVTYPE)]<-"HIGH WAVES"
+data$EVTYPE[grep("HIGH WIND",data$EVTYPE)]<-"HIGH WIND"
+data$EVTYPE[grep("HURRICANE|TYPHOON",data$EVTYPE)]<-"HURRICANE"
+data$EVTYPE[grep("HYPOTHERMIA",data$EVTYPE)]<-"HYPOTHERMIA/EXPOSURE"
+data$EVTYPE[grep("LIGHTN|LIGHTI|LIGNT",data$EVTYPE)]<-"LIGHTNING"
+data$EVTYPE[grep("LOW TEMPERATURE",data$EVTYPE)]<-"LOW TEMPERATURE"
+data$EVTYPE[grep("MIXED PRECIP",data$EVTYPE)]<-"MIXED PRECIPITATION"
+data$EVTYPE[grep("MILD",data$EVTYPE)]<-"MILD/DRY PATTERN"
+data$EVTYPE[grep("RAIN",data$EVTYPE)]<-"HEAVY RAIN"
+data$EVTYPE[grep("RIP",data$EVTYPE)]<-"RIPTIDE"
+data$EVTYPE[grep("SLEET",data$EVTYPE)]<-"SLEET STORM"
+data$EVTYPE[grep("SLIDE",data$EVTYPE)]<-"LANDSLIDE"
+data$EVTYPE[grep("SNOW",data$EVTYPE)]<-"SNOW"
+data$EVTYPE[grep("SPOUT",data$EVTYPE)]<-"WATERSPOUT"
+data$EVTYPE[grep("SURF",data$EVTYPE)]<-"SURF"
+data$EVTYPE[grep("SURGE",data$EVTYPE)]<-"STORM SURGE"
+data$EVTYPE[grep("SWELL|SEA|TIDE",data$EVTYPE)]<-"SEA TIDES AND SWELLS"
+data$EVTYPE[grep("TORN|FUNNEL",data$EVTYPE)]<-"TORNADO"
+data$EVTYPE[grep("THUNDER|TSTM",data$EVTYPE)]<-"THUNDER STORM"
+data$EVTYPE[grep("TROPICAL",data$EVTYPE)]<-"TROPICAL STORM"
+data$EVTYPE[grep("UNUSUAL|VERY WARM",data$EVTYPE)]<-"UNUSUALLY WARM"
+data$EVTYPE[grep("WIND|WND",data$EVTYPE)]<-"WIND"
+##sort(unique(data$EVTYPE))
+```
+  
+Next determine the numerical value of the damages from the key given in the descriptions for PROPDMGEXP and CROPDMGEXP
+```{r damages}
+data$PDMG[data$PROPDMG==0]<-0  
+data$PDMG[toupper(data$PROPDMGEXP)=="H"]<-100*data$PROPDMG[toupper(data$PROPDMGEXP)=="H"]
+data$PDMG[toupper(data$PROPDMGEXP)=="K"]<-1000*data$PROPDMG[toupper(data$PROPDMGEXP)=="K"]
+data$PDMG[toupper(data$PROPDMGEXP)=="M"]<-10^6*data$PROPDMG[toupper(data$PROPDMGEXP)=="M"]
+data$PDMG[toupper(data$PROPDMGEXP)=="B"]<-10^9*data$PROPDMG[toupper(data$PROPDMGEXP)=="B"]
+data$CDMG[data$CROPDMG==0]<-0 
+data$CDMG[toupper(data$CROPDMGEXP)=="H"]<-100*data$CROPDMG[toupper(data$CROPDMGEXP)=="H"]
+data$CDMG[toupper(data$CROPDMGEXP)=="K"]<-1000*data$CROPDMG[toupper(data$CROPDMGEXP)=="K"]
+data$CDMG[toupper(data$CROPDMGEXP)=="M"]<-10^6*data$CROPDMG[toupper(data$CROPDMGEXP)=="M"]
+data$CDMG[toupper(data$CROPDMGEXP)=="B"]<-10^9*data$CROPDMG[toupper(data$CROPDMGEXP)=="B"]
+data$TDMG<-data$PDMG+data$CDMG
+```
+  
+### Data Preparation for Graphs
+Total Fatalities, Injuries and Property Damages have to be aggregated by Event Type to be reproduced graphically
+```{r prepare,results='asis'}
+fatalities<-data%>%group_by(EVTYPE)%>%summarise(Fatalities=sum(FATALITIES))
+injuries<-data%>%group_by(EVTYPE)%>%summarise(Injuries=sum(INJURIES))
+damages<-data%>%group_by(EVTYPE)%>%summarise(Damages=sum(TDMG))
+events<-as.data.frame(table(data$EVTYPE));names(events)
+final<-cbind(events,fatalities$Fatalities,injuries$Injuries,damages$Damages)
+names(final)<-c("Event","Count","Fatalities","Injuries","Damages")
+final<-final%>%mutate(Fatalities=Fatalities/Count,Injuries=Injuries/Count,Damages=Damages/(Count*10^6))
+xt<-xtable(head(final))
+print(xt,type="html")
+```
+
+### Results
+Barplots for the top 6 weather events in each category
+```{r fatalities}
+barplot(head(final$Fatalities[order(final$Fatalities,decreasing = TRUE)]),names.arg = head(final$Event[order(final$Fatalities,decreasing = TRUE)]),ylab = "Fatalities per Event",main = "Most Deadly Weather Disasters",cex.axis=0.7, cex.names=0.6, col="darkred",las=2,ylim = c(0,3.0))
+```
+```{r injuries}
+barplot(head(final$Injuries[order(final$Injuries,decreasing = TRUE)]),names.arg = head(final$Event[order(final$Injuries,decreasing = TRUE)]),ylab = "Injuries per Event",main = "Most Injuries in Weather Disasters",cex.axis=0.7, cex.names=0.6, col="grey",las=2,ylim=c(0,7.0))
+```
+```{r expensive}
+barplot(head(final$Damages[order(final$Damages,decreasing = TRUE)]),names.arg = head(final$Event[order(final$Fatalities,decreasing = TRUE)]),ylab = "Damages (M$) per Event",main = "Most Expensive Weather Disasters",cex.axis=0.7, cex.names=0.6, col="steelblue",las=2, ylim=c(0,300))
+```
+
+

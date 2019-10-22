@@ -1,0 +1,85 @@
+---
+title: "Statistical Inference Project - Part 1"
+author: "Srotaswati Panda"
+date: "01/10/2019"
+output: pdf_document
+---
+
+### This is a project for the Coursera Data Science class on Statistical Inference
+
+# Part 1: Simulation Exercise
+### Overview: 
+Investigate the exponential distribution function and compare it with the Central Limit Theorem. Illustrate via simulation and associated explanatory text the properties of the distribution of the mean of 40 exponentials.  
+1. Show the sample mean and compare it to the theoretical mean of the distribution.  
+2. Show how variable the sample is (via variance) and compare it to the theoretical variance of the distribution.  
+3. Show that the distribution is approximately normal.
+
+### Setup environment and simulations
+Load libraries and set global options
+```{r setup}
+library(knitr)
+opts_chunk$set(echo = TRUE,results="hold",message=FALSE,warning=FALSE, tidy=TRUE)
+library(ggplot2)
+```
+
+Set variables
+```{r variables}
+n<-40 ## sample size
+lambda<-0.2 ## rate or inverse scale
+nosim<-1000 ## number of simulations
+set.seed(456456)
+```
+
+Create matrix with 1000 simulations, each row with 40 samples drawn from the exponential distribution and calculate the averages for each of the simulations 
+```{r matrix}
+data<-matrix(rexp(n*nosim,lambda),nosim,n)
+means<-rowMeans(data)
+```
+
+### 1. Sample Mean versus Theoretical Mean
+```{r mean_compare}
+sample_mean<-mean(means)
+theo_mean<-1/lambda
+```
+```{r print_mean,echo= FALSE, results='asis'}
+sprintf("The distribution of the sample means is centred at %.2f and the theoritical mean is centred at %.2f",sample_mean,theo_mean)
+```
+
+### 2. Sample Variance versus Theoretical Variance
+```{r variance_compare}
+sample_var<-var(means)
+theo_var<-1/lambda^2/n
+```
+```{r print_var,echo = FALSE, results='asis'}
+sprintf("The variance of the sample means is %.3f and the theoritical variance of the distribution is %.3f",sample_var,theo_var)
+```
+
+### 3. Distribution
+```{r normal}
+g<-ggplot(data.frame(means),aes(x=means))
+g<-g+geom_histogram(aes(y=..density..),color="black",fill="steelblue")
+g<-g+stat_function(fun=dnorm,args=list(mean=sample_mean,sd=sqrt(sample_var)),color="blue")
+g<-g+stat_function(fun=dnorm,args=list(mean=theo_mean,sd=sqrt(theo_var)),color="red")
+g<-g+ggtitle("Sampling of means from exponential distribution")
+g<-g+geom_vline(aes(xintercept=sample_mean,color="blue"))
+g<-g+geom_vline(aes(xintercept=theo_mean,color="red"))
+g<-g+xlab("Means from 40 samples")
+g<-g+theme(axis.title.y=element_blank())
+g<-g+theme(legend.position = "none")
+g
+```
+The distribution is approximately normal
+
+### Confidence Interval Comparison
+```{r cinterval}
+sample_ci<-round(sample_mean+c(-1,1)*t(0.975)*sqrt(sample_var/n),3)
+theo_ci<-round(theo_mean+c(-1,1)*t(0.975)*sqrt(theo_var/n),3)
+```
+```{r print_ci,echo = FALSE, results='asis'}
+sprintf("The CI of the sample means is: %.2f %.2f",sample_ci[1],sample_ci[2])
+cat("\n")
+sprintf("The CI of the theoritical means is: %.2f %.2f",theo_ci[1],theo_ci[2])
+```
+  
+  
+### The exponential distribution conforms with the Central Limit Theorem.

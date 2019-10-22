@@ -1,0 +1,87 @@
+---
+title: "Course Project 1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, echo=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(xtable)
+```
+
+## 1. Code for reading in the dataset and/or processing the data
+
+```{r read, results='asis'}
+if (!file.exists("./data/getdata4.zip")){
+  fileurl<-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+  download.file(fileurl,"./data/getdata4",method="curl")
+}
+if (!(file.exists("./data/activity.csv"))) { 
+  unzip("./data/getdata3.zip",exdir="./data") 
+}
+data<-read.csv("./data/activity.csv")
+xt<-xtable(head(data))
+print(xt,type="html")
+```
+
+## 2. Histogram of the total number of steps taken each day
+
+```{r histogram, results='asis'}
+data_hist<-data%>%group_by(date)%>%summarise(steps=sum(steps))%>%filter(!is.na(steps))
+xt<-xtable(head(data_hist))
+print(xt,type="html")
+hist(data_hist$steps,xlab = "Steps taken each day",main = NULL)
+```
+
+## 3. Mean and median number of steps taken each day
+
+```{r mean}
+mean(data_hist$steps)
+median(data_hist$steps)
+```
+
+## 4. Time series plot of the average number of steps taken
+
+```{r timeseries, results='asis'}
+data_timeseries<-data%>%select(interval,steps)%>%filter(!is.na(steps))%>%group_by(interval)%>%summarise(steps=mean(steps))
+xt<-xtable(head(data_timeseries))
+print(xt,type="html")
+ggplot(data_timeseries,aes(interval,steps))+geom_line()
+```
+
+## 5. The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r maxsteps}
+data_timeseries$interval[which.max(data_timeseries$steps)]
+```
+
+## 6. Code to describe and show a strategy for imputing missing data
+### Missing values populated by the mean of steps taken per day
+```{r imputemissing, results='asis'}
+sprintf("Missing values = %1.2f%%", 100*mean(is.na(data)))
+impute_missing<-function(x){replace(x,is.na(x),mean(x,na.rm = TRUE))}
+data_filled<-data%>%group_by(date)%>%summarise(steps=sum(steps))%>%mutate(steps=impute_missing(steps))
+xt<-xtable(head(data_filled))
+print(xt,type="html")
+```
+
+## 7. Histogram of the total number of steps taken each day after missing values are imputed
+```{r histogram_missing}
+hist(data_filled$steps,xlab = "Steps taken each day",main = NULL)
+sprintf("Old mean =%.1f and New mean = %.1f",mean(data_hist$steps),mean(data_filled$steps))
+sprintf("Old median =%.1f and New median = %.1f",median(data_hist$steps),median(data_filled$steps))
+```
+
+## 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r panelplot,results='asis'}
+data_day<-data%>%group_by(interval)%>%mutate(steps=impute_missing(steps))%>%mutate(date=as.Date(date))%>%mutate(day=weekdays(date))%>%mutate(weekend=ifelse(day=="Saturday"|day=="Sunday", "Weekend", "Weekday" ))
+data_day<-aggregate(data_day$steps,by=list(data_day$weekend,data_day$interval),na.omit(mean))
+names(data_day) <- c("weekend", "interval", "steps")
+xt<-xtable(head(data_day))
+print(xt,type="html")
+ggplot(data_day, aes(interval,steps, color=weekend)) + geom_line()+facet_grid(weekend ~.)+xlab("Interval")+ylab("Mean of Steps") +ggtitle("Comparison of Average Number of Steps per 5-minute interval")+theme(legend.position = "none")
+```
