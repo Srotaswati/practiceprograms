@@ -2,7 +2,7 @@
 ## (i.e. with the lowest mortality rate) given the state and a specified outcome
 
 best <- function(state,outcome){
-    my_data <- read.csv("outcome-of-care-measures.csv",stringsAsFactors = FALSE)
+    my_data <- read.csv("./data/outcome-of-care-measures.csv",stringsAsFactors = FALSE)
     outnames <- list(names=c("heart attack", "heart failure", "pneumonia"),cols=c(11,17,23))
     states <- unique(my_data[,7])
     if(is.na(match(toupper(state),states)))
@@ -21,7 +21,7 @@ best <- function(state,outcome){
 ## mortality rate given the state and a specified outcome
 
 rankhospital <- function(state, outcome, num = "best"){
-    my_data <- read.csv("outcome-of-care-measures.csv",stringsAsFactors = FALSE)
+    my_data <- read.csv("./data/outcome-of-care-measures.csv",stringsAsFactors = FALSE)
     outnames <- list(names=c("heart attack", "heart failure", "pneumonia"),cols=c(11,17,23))
     states <- unique(my_data[,7])
     if(is.na(match(toupper(state),states)))
@@ -45,7 +45,7 @@ rankhospital <- function(state, outcome, num = "best"){
 ## and sorted by mortality rate given a specified outcome
 
 rankall <- function(outcome, num = "best"){
-    my_data <- read.csv("outcome-of-care-measures.csv",stringsAsFactors = FALSE)
+    my_data <- read.csv("./data/outcome-of-care-measures.csv",stringsAsFactors = FALSE)
     outnames <- list(names=c("heart attack", "heart failure", "pneumonia"),cols=c(11,17,23))
     states <- unique(my_data[,7])
     if(!(outcome %in% outnames$names))
